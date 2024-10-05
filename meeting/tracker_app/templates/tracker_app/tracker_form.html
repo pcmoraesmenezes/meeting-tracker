@@ -1,16 +1,107 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    {% load static %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Meeting Tracker Form</title>
+    <link rel="stylesheet" href="{% static 'tracker_app/tracker_form.css' %}">
+    <style>
+        .required-field::after {
+            content: ' *';
+            color: red;
+        }
+    </style>
 </head>
 <body>
-    <h1>Meeting Tracker Form</h1>
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Submit</button>
-    </form>
+    <div class="form-container">
+        <h1>Meeting Tracker</h1>
+        <form method="POST">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label class="required-field" for="id_client">Client</label>
+                {{ form.client }}
+            </div>
+
+            <div class="form-group">
+                <label class="required-field" for="id_date_scheduled">Date Scheduled</label>
+                {{ form.date_scheduled }}
+            </div>
+
+            <div class="form-group">
+                <label class="required-field" for="id_company_name">Company Name</label>
+                {{ form.company_name }}
+            </div>
+
+            <div class="form-group">
+                <label class="required-field" for="id_first_name">First Name</label>
+                {{ form.first_name }}
+            </div>
+
+            <div class="form-group">
+                <label class="required-field" for="id_last_name">Last Name</label>
+                {{ form.last_name }}
+            </div>
+
+            <div class="form-group">
+                <label class="required-field" for="id_email">Email</label>
+                {{ form.email }}
+            </div>
+
+            <div class="form-group">
+                <label class="required-field" for="id_lu_rep">LU Rep</label>
+                {{ form.lu_rep }}
+            </div>
+
+            <!-- Campos não obrigatórios -->
+            <div class="form-group">
+                <label for="id_did_they_show">Did They Show</label>
+                {{ form.did_they_show }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_meeting_date">Meeting Date</label>
+                {{ form.meeting_date }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_meeting_time">Meeting Time</label>
+                {{ form.meeting_time }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_time_zone">Time Zone</label>
+                {{ form.time_zone }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_appointment_handler">Appointment Handler</label>
+                {{ form.appointment_handler }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_position">Position</label>
+                {{ form.position }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_phone_number">Phone Number</label>
+                {{ form.phone_number }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_lu_call_notes">LU Call Notes</label>
+                {{ form.lu_call_notes }}
+            </div>
+
+            <div class="form-group">
+                <label for="id_call_recording_link">Call Recording Link</label>
+                {{ form.call_recording_link }}
+            </div>
+
+            <button type="submit">Submit</button>
+        </form>
+    </div>
 </body>
 </html>
