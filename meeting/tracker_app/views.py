@@ -93,4 +93,4 @@ def tracker_form_view(request):
 
 # View de sucesso
 def tracker_success_view(request):
-    return HttpResponse('<h1>Formulário enviado com sucesso!</h1>')
+    return render(request, 'tracker_app/tracker_success.html')
