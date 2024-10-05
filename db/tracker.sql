@@ -1,0 +1,21 @@
+CREATE TABLE IF NOT EXISTS tracker (
+    id SERIAL PRIMARY KEY,
+    client INT NOT NULL,
+    did_they_show INT,
+    date_scheduled DATE NOT NULL,
+    meeting_date DATE,
+    meeting_time TIME,
+    time_zone VARCHAR(255),
+    appointment_handler VARCHAR(255),
+    company_name VARCHAR(255) NOT NULL,
+    first_name VARCHAR(255) NOT NULL,
+    last_name VARCHAR(255) NOT NULL,
+    position VARCHAR(255),
+    phone_number VARCHAR(255),
+    lu_call_notes TEXT,
+    email VARCHAR(255) NOT NULL,
+    lu_rep VARCHAR(255) NOT NULL,
+    call_recording_link VARCHAR(255),
+    FOREIGN KEY (client) REFERENCES clients(id),
+    FOREIGN KEY (did_they_show) REFERENCES did_they_show(id)
+);
