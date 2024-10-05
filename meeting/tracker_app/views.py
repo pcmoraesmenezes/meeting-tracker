@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from .models import Client, Status
 import django.db.utils
 from datetime import datetime
+from django.urls import reverse
 
 
 from .forms import TrackerForm
@@ -27,6 +28,7 @@ def tracker_form_view(request):
                 create_table_query = f"""
                 CREATE TABLE IF NOT EXISTS {table_name} (
                     id SERIAL PRIMARY KEY,
+                    did_they_show INT REFERENCES did_they_show(id),
                     date_scheduled DATE NOT NULL,
                     meeting_date DATE,
                     meeting_time TIME,
@@ -46,8 +48,16 @@ def tracker_form_view(request):
                 cursor.execute(create_table_query)
 
                 # Inserir os dados na nova tabela
+                did_they_show_value = tracker_instance.did_they_show.id if tracker_instance.did_they_show else None
+
+                # Cast explícito para garantir que o valor seja tratado como int
+                if did_they_show_value is not None:
+                    did_they_show_value = int(did_they_show_value)
+                print("Valor enviado para did_they_show:", tracker_instance.did_they_show.id if tracker_instance.did_they_show else None)
+
                 insert_data_query = f"""
                 INSERT INTO {table_name} (
+                    did_they_show,
                     date_scheduled,
                     meeting_date,
                     meeting_time,
@@ -63,10 +73,11 @@ def tracker_form_view(request):
                     lu_rep,
                     call_recording_link
                 ) VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                   %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 );
                 """
                 cursor.execute(insert_data_query, [
+                    did_they_show_value,
                     tracker_instance.date_scheduled,
                     tracker_instance.meeting_date,
                     tracker_instance.meeting_time,
@@ -111,11 +122,26 @@ def select_client_view(request):
 
 @login_required
 def client_data_view(request, client_name):
-    # Obter o valor de client_name a partir do parâmetro GET
     client_name = request.GET.get('client_name', client_name)
-
-    # Certificar que o nome está em minúsculas e sem espaços
     table_name = f"{client_name.lower().replace(' ', '_')}_meeting_tracker"
+
+    if request.method == 'POST':
+        try:
+            with connection.cursor() as cursor:
+                for key, value in request.POST.items():
+                    if key.startswith('did_they_show_'):
+                        entry_id = key.split('_')[-1]
+                        # Atualizar did_they_show para a entrada específica
+                        cursor.execute(f"""
+                            UPDATE {table_name}
+                            SET did_they_show = %s
+                            WHERE id = %s
+                        """, [value, entry_id])
+        except DatabaseError as e:
+            return render(request, 'tracker_app/client_data.html', {
+                'client_name': client_name,
+                'error_message': f"Erro ao atualizar a tabela: {e}"
+            })
 
     try:
         with connection.cursor() as cursor:
@@ -132,10 +158,25 @@ def client_data_view(request, client_name):
                     'error_message': f"Tabela '{table_name}' não encontrada."
                 })
 
-            # Buscar todos os dados da tabela do cliente
-            cursor.execute(f"SELECT * FROM {table_name}")
+            # Buscar todos os dados da tabela do cliente com JOIN para obter o valor descritivo de did_they_show
+            cursor.execute(f"""
+                SELECT t.id, t.date_scheduled, t.meeting_date, t.meeting_time, 
+                       t.time_zone, t.appointment_handler, t.company_name, 
+                       t.first_name, t.last_name, t.position, t.phone_number, 
+                       t.lu_call_notes, t.email, t.lu_rep, t.call_recording_link, 
+                       COALESCE(d.option_name, '-') AS did_they_show_name
+                FROM {table_name} t
+                LEFT JOIN did_they_show d ON t.did_they_show = d.id
+                ORDER BY t.id ASC
+            """)
             columns = [col[0] for col in cursor.description]
             rows = cursor.fetchall()
+
+            # Criar uma lista de dicionários para facilitar o acesso no template
+            data = [
+                dict(zip(columns, row))
+                for row in rows
+            ]
 
     except DatabaseError as e:
         return render(request, 'tracker_app/client_data.html', {
@@ -143,10 +184,13 @@ def client_data_view(request, client_name):
             'error_message': f"Erro ao acessar a tabela: {e}"
         })
 
+    did_they_show_options = DidTheyShow.objects.all()
+
     return render(request, 'tracker_app/client_data.html', {
         'client_name': client_name,
         'columns': columns,
-        'rows': rows
+        'data': data,
+        'did_they_show_options': did_they_show_options,
     })
 
 @login_required
@@ -154,26 +198,45 @@ def edit_entry_view(request, client_name, entry_id):
     table_name = f"{client_name.lower().replace(' ', '_')}_meeting_tracker"
     
     if request.method == 'POST':
-        # Atualizar os dados do formulário
         updated_data = request.POST
         update_query = f"UPDATE {table_name} SET "
         params = []
 
+        # Buscar os valores atuais para garantir que os campos obrigatórios sejam mantidos
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM {table_name} WHERE id = %s", [entry_id])
+            current_row = cursor.fetchone()
+            columns = [col[0] for col in cursor.description]
+            current_data = dict(zip(columns, current_row))
+
         # Criar a query dinamicamente para cada coluna
         for column, value in updated_data.items():
-            if column != 'csrfmiddlewaretoken':
-                # Verificar se o valor está vazio e definir como NULL se necessário
+            if column != 'csrfmiddlewaretoken' and column != 'id':
                 if value == "":
+                    # Se o campo for obrigatório, mantenha o valor atual do banco
+                    if column in ['client', 'date_scheduled', 'company_name', 'first_name', 'last_name', 'email', 'lu_rep']:
+                        value = current_data[column]
+                    else:
+                        value = None
+
+                # Atualizar o valor na query
+                if column == 'did_they_show' and value:
+                    if DidTheyShow.objects.filter(id=value).exists():
+                        update_query += f"{column} = %s, "
+                        params.append(value)
+                    else:
+                        update_query += f"{column} = NULL, "
+                elif value is None:
                     update_query += f"{column} = NULL, "
                 else:
                     update_query += f"{column} = %s, "
                     params.append(value)
 
-        # Remover a última vírgula e espaço
         update_query = update_query.rstrip(", ")
         update_query += " WHERE id = %s"
         params.append(entry_id)
 
+        # Executar a query de atualização
         try:
             with connection.cursor() as cursor:
                 cursor.execute(update_query, params)
@@ -181,20 +244,34 @@ def edit_entry_view(request, client_name, entry_id):
             return render(request, 'tracker_app/edit_entry.html', {
                 'client_name': client_name,
                 'error_message': f"Erro ao atualizar a tabela: {e}",
-                'column_value_pairs': [(column, value) for column, value in updated_data.items() if column != 'csrfmiddlewaretoken']
+                'column_value_pairs': [(column, value) for column, value in updated_data.items() if column != 'csrfmiddlewaretoken' and column != 'id'],
+                'did_they_show_options': DidTheyShow.objects.all(),
+                'current_did_they_show': updated_data.get('did_they_show', None)
             })
         return redirect('client_data', client_name=client_name)
 
     else:
-        # Buscar os dados para preencher o formulário
         with connection.cursor() as cursor:
             cursor.execute(f"SELECT * FROM {table_name} WHERE id = %s", [entry_id])
             row = cursor.fetchone()
             columns = [col[0] for col in cursor.description]
 
-        column_value_pairs = list(zip(columns, row)) if row else []
+        # Formatar os valores de data e hora para o formato adequado
+        column_value_pairs = []
+        current_did_they_show = None
+        if row:
+            for col, val in zip(columns, row):
+                if col == 'did_they_show':
+                    current_did_they_show = val
+                if col in ['date_scheduled', 'meeting_date'] and val:
+                    val = val.strftime('%Y-%m-%d')
+                elif col == 'meeting_time' and val:
+                    val = val.strftime('%H:%M')
+                column_value_pairs.append((col, val))
 
         return render(request, 'tracker_app/edit_entry.html', {
             'client_name': client_name,
-            'column_value_pairs': column_value_pairs
+            'column_value_pairs': [pair for pair in column_value_pairs if pair[0] != 'id'],  # Remover o campo 'id'
+            'did_they_show_options': DidTheyShow.objects.all(),
+            'current_did_they_show': current_did_they_show
         })
