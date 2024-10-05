@@ -1,0 +1,4 @@
+CREATE TABLE IF NOT EXISTS did_they_show (
+    id SERIAL PRIMARY KEY,
+    option_ VARCHAR(255) NOT NULL
+);
