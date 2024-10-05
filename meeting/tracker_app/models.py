@@ -21,7 +21,7 @@ class DidTheyShow(models.Model):
 
 class Tracker(models.Model):
     client = models.ForeignKey(Client, on_delete=models.CASCADE)
-    did_they_show = models.ForeignKey(DidTheyShow, on_delete=models.SET_NULL, null=True)
+    did_they_show = models.ForeignKey(DidTheyShow, null=True, on_delete=models.SET_NULL)
     date_scheduled = models.DateField()
     meeting_date = models.DateField(null=True, blank=True)
     meeting_time = models.TimeField(null=True, blank=True)
@@ -36,6 +36,6 @@ class Tracker(models.Model):
     email = models.CharField(max_length=255)
     lu_rep = models.CharField(max_length=255)
     call_recording_link = models.CharField(max_length=255, null=True, blank=True)
-
+    
     def __str__(self):
         return f"{self.client.name} - {self.company_name}"
