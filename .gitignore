@@ -1,0 +1,5 @@
+venv
+meeting/meeting/__pycache__
+meeting/tracker_app/__pycache__
+meeting/tracker_app/migrations
+meeting/meeting/settings.py
