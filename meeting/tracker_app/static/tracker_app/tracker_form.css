@@ -1,0 +1,97 @@
+body {
+    font-family: 'Arial', sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;  /* Alinhar o formulário ao topo para evitar corte */
+    min-height: 100vh;
+    padding-top: 2rem;
+}
+
+.form-container {
+    background-color: #ffffff;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    width: 90%;
+    max-width: 600px;  /* Definir um valor máximo para que o formulário não fique muito grande */
+    margin-bottom: 2rem;  /* Adicionar margem inferior para melhorar a navegação */
+}
+
+.form-container h1 {
+    text-align: center;
+    margin-bottom: 1.5rem;
+    color: #007bff;
+    font-weight: bold;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    margin-top: 1rem;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+    padding: 0.75rem;
+    font-size: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    transition: border-color 0.3s ease;
+    width: 100%;  /* Garantir que os inputs ocupem toda a largura disponível */
+}
+
+input[type="text"]:focus,
+input[type="email"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+select:focus,
+textarea:focus {
+    border-color: #007bff;
+    outline: none;
+}
+
+button[type="submit"] {
+    background-color: #007bff;
+    color: #fff;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+textarea {
+    resize: vertical;
+}
+
+input[type="date"],
+input[type="time"] {
+    padding: 0.65rem;
+}
+
+.success-message {
+    text-align: center;
+    font-size: 1.25rem;
+    color: #28a745;
+    margin-top: 1.5rem;
+}
+
