@@ -1,6 +1,11 @@
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
-from django.db import connection  # Corrigir a importação de connection
+from django.db import DatabaseError, connection  # Corrigir a importação de connection
+from django.contrib.auth.decorators import login_required
+from .models import Client, Status
+import django.db.utils
+from datetime import datetime
+
 
 from .forms import TrackerForm
 from .models import Client, Status, DidTheyShow
@@ -94,3 +99,102 @@ def tracker_form_view(request):
 # View de sucesso
 def tracker_success_view(request):
     return render(request, 'tracker_app/tracker_success.html')
+
+@login_required
+def select_client_view(request):
+    try:
+        active_status = Status.objects.get(name='ativo')
+        clients = Client.objects.filter(id_status=active_status)
+    except Status.DoesNotExist:
+        clients = Client.objects.none()
+    return render(request, 'tracker_app/select_client.html', {'clients': clients})
+
+@login_required
+def client_data_view(request, client_name):
+    # Obter o valor de client_name a partir do parâmetro GET
+    client_name = request.GET.get('client_name', client_name)
+
+    # Certificar que o nome está em minúsculas e sem espaços
+    table_name = f"{client_name.lower().replace(' ', '_')}_meeting_tracker"
+
+    try:
+        with connection.cursor() as cursor:
+            # Verificar se a tabela existe antes de buscar os dados
+            cursor.execute(f"""
+                SELECT EXISTS (
+                    SELECT FROM information_schema.tables 
+                    WHERE table_name = %s
+                )
+            """, [table_name])
+            if not cursor.fetchone()[0]:
+                return render(request, 'tracker_app/client_data.html', {
+                    'client_name': client_name,
+                    'error_message': f"Tabela '{table_name}' não encontrada."
+                })
+
+            # Buscar todos os dados da tabela do cliente
+            cursor.execute(f"SELECT * FROM {table_name}")
+            columns = [col[0] for col in cursor.description]
+            rows = cursor.fetchall()
+
+    except DatabaseError as e:
+        return render(request, 'tracker_app/client_data.html', {
+            'client_name': client_name,
+            'error_message': f"Erro ao acessar a tabela: {e}"
+        })
+
+    return render(request, 'tracker_app/client_data.html', {
+        'client_name': client_name,
+        'columns': columns,
+        'rows': rows
+    })
+
+@login_required
+def edit_entry_view(request, client_name, entry_id):
+    table_name = f"{client_name.lower().replace(' ', '_')}_meeting_tracker"
+    
+    if request.method == 'POST':
+        # Atualizar os dados do formulário
+        updated_data = request.POST
+        update_query = f"UPDATE {table_name} SET "
+        params = []
+
+        # Criar a query dinamicamente para cada coluna
+        for column, value in updated_data.items():
+            if column != 'csrfmiddlewaretoken':
+                # Verificar se o valor está vazio e definir como NULL se necessário
+                if value == "":
+                    update_query += f"{column} = NULL, "
+                else:
+                    update_query += f"{column} = %s, "
+                    params.append(value)
+
+        # Remover a última vírgula e espaço
+        update_query = update_query.rstrip(", ")
+        update_query += " WHERE id = %s"
+        params.append(entry_id)
+
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute(update_query, params)
+        except DatabaseError as e:
+            return render(request, 'tracker_app/edit_entry.html', {
+                'client_name': client_name,
+                'error_message': f"Erro ao atualizar a tabela: {e}",
+                'column_value_pairs': [(column, value) for column, value in updated_data.items() if column != 'csrfmiddlewaretoken']
+            })
+        return redirect('client_data', client_name=client_name)
+
+    else:
+        # Buscar os dados para preencher o formulário
+        with connection.cursor() as cursor:
+            cursor.execute(f"SELECT * FROM {table_name} WHERE id = %s", [entry_id])
+            row = cursor.fetchone()
+            columns = [col[0] for col in cursor.description]
+
+        column_value_pairs = list(zip(columns, row)) if row else []
+
+        return render(request, 'tracker_app/edit_entry.html', {
+            'client_name': client_name,
+            'column_value_pairs': column_value_pairs
+        })
