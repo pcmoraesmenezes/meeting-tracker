@@ -4,3 +4,4 @@ meeting/tracker_app/__pycache__
 meeting/tracker_app/migrations
 meeting/meeting/settings.py
 meeting/staticfiles
+meeting/tracker_app/templatetags/__pycache__
