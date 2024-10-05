@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Client</title>
+    <link rel="stylesheet" href="{% static 'tracker_app/tracker_form.css' %}">
+</head>
+<body>
+    <div class="form-container">
+        <h1>Select a Client</h1>
+        <form method="GET" action="{% url 'client_data' client_name='dummy' %}">
+            <label for="client">Client:</label>
+            <select name="client_name" id="client">
+                <option value="" disabled selected>Choose a client</option>
+                {% for client in clients %}
+                    <option value="{{ client.name }}">{{ client.name }}</option>
+                {% endfor %}
+            </select>
+            <button type="submit">View Data</button>
+        </form>
+    </div>
+</body>
+</html>

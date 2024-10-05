@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit Entry</title>
+    <link rel="stylesheet" href="{% static 'tracker_app/tracker_form.css' %}">
+    <style>
+        .form-container {
+            max-width: 600px;
+            margin: 2rem auto;
+            padding: 2rem;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 0.5rem;
+        }
+        input {
+            width: 100%;
+            padding: 0.5rem;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 0.5rem 1rem;
+            font-size: 1rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1>Edit Data for {{ client_name }}</h1>
+        {% if error_message %}
+            <p style="color: red;">{{ error_message }}</p>
+        {% else %}
+            <form method="POST">
+                {% csrf_token %}
+                {% for column, value in column_value_pairs %}
+                    <div class="form-group">
+                        <label>{{ column }}</label>
+                        {% if column == 'meeting_time' %}
+                            <input type="time" name="{{ column }}" value="{{ value|date:"H:i" }}">
+                        {% elif column == 'date_scheduled' or column == 'meeting_date' %}
+                            <input type="date" name="{{ column }}" value="{{ value|date:"Y-m-d" }}">
+                        {% else %}
+                            <input type="text" name="{{ column }}" value="{{ value }}">
+                        {% endif %}
+                    </div>
+                {% endfor %}
+                <button type="submit">Save Changes</button>
+            </form>
+        {% endif %}
+    </div>
+</body>
+</html>
