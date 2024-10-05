@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     {% load static %}
+    {% load custom_filters %}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Edit Entry</title>
@@ -23,7 +24,7 @@
             display: block;
             margin-bottom: 0.5rem;
         }
-        input {
+        input, select {
             width: 100%;
             padding: 0.5rem;
             font-size: 1rem;
@@ -46,28 +47,38 @@
     </style>
 </head>
 <body>
-    <div class="form-container">
+    <div class="edit-form-container">
         <h1>Edit Data for {{ client_name }}</h1>
         {% if error_message %}
             <p style="color: red;">{{ error_message }}</p>
-        {% else %}
-            <form method="POST">
-                {% csrf_token %}
-                {% for column, value in column_value_pairs %}
-                    <div class="form-group">
-                        <label>{{ column }}</label>
-                        {% if column == 'meeting_time' %}
-                            <input type="time" name="{{ column }}" value="{{ value|date:"H:i" }}">
-                        {% elif column == 'date_scheduled' or column == 'meeting_date' %}
-                            <input type="date" name="{{ column }}" value="{{ value|date:"Y-m-d" }}">
-                        {% else %}
-                            <input type="text" name="{{ column }}" value="{{ value }}">
-                        {% endif %}
-                    </div>
-                {% endfor %}
-                <button type="submit">Save Changes</button>
-            </form>
         {% endif %}
+        <form method="POST">
+            {% csrf_token %}
+            {% for col, val in column_value_pairs %}
+                <div class="form-group">
+                    <label for="{{ col }}">{{ col|replace_underscore }}</label>
+                    {% if col == 'did_they_show' %}
+                        <select id="did_they_show" name="did_they_show">
+                            <option value="" {% if not current_did_they_show %}selected{% endif %}>---</option>
+                            {% for option in did_they_show_options %}
+                                <option value="{{ option.id }}" {% if option.id == current_did_they_show %}selected{% endif %}>
+                                    {{ option.option_name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    {% elif col == 'date_scheduled' or col == 'meeting_date' %}
+                        <!-- Campo de data com valor formatado -->
+                        <input type="date" id="{{ col }}" name="{{ col }}" value="{{ val }}">
+                    {% elif col == 'meeting_time' %}
+                        <!-- Campo de hora -->
+                        <input type="time" id="{{ col }}" name="{{ col }}" value="{{ val }}">
+                    {% else %}
+                        <input type="text" id="{{ col }}" name="{{ col }}" value="{{ val|default_if_none:'' }}">
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Save Changes</button>
+        </form>
     </div>
 </body>
 </html>
